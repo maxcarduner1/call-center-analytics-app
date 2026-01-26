@@ -1,96 +1,130 @@
 # Fill in the details
 
-Make the app into a to-do list app with these specifications.
-do not be fancy with parameterization, just use f-strings.
-Make the UI look crisp - minimalistic yet aesthetically pleasing.
+Make the app into a Call Quality Scoring viewer with these specifications.
+Do not be fancy with parameterization, just use f-strings.
+Make the UI look crisp - minimalistic yet aesthetically pleasing with a professional call center dashboard feel.
 
-## Table Name Derivation
+## Database Table
 
-The database table name is derived from the user's email address using this priority order:
+The application reads from the `call_center_scores` table in the `public` schema, which is synchronized from Databricks via the reverse sync pipeline described in the design document.
 
-1. **First priority**: Check the `X-Forwarded-Email` header from the request
-2. **Fallback**: Use the `MY_EMAIL` environment variable
-
-Once you have the email, derive the table name prefix as: `email.split('@')[0].replace('.', '_')`, then suffix it with `_lists`.
-
-**Example**: If email is `john.doe@company.com`, the table name becomes `john_doe_lists`.
-
-**Schema**: All tables are in the `public` schema.
+**Schema**: `public.call_center_scores`
 
 ## Frontend & User Experience
 
-It should show a list of the current user's to-do items. Each item has:
+The application should have two main views:
 
--   A checkbox to mark the item as complete
--   Clickable title that opens a detail view for editing/deleting/marking done/closing
+### 1. Call List View (Homepage)
+- Display a table/list of all calls showing:
+  - Call ID
+  - Member ID  
+  - Call Date (formatted nicely)
+  - Total Score (with visual indicator - green for high scores, yellow for medium, red for low)
+- Each row should be clickable to view the full call details
+- Include filtering options:
+  - Filter by member ID (text input)
+  - Filter by date range (from/to date pickers)
+  - Filter by minimum score (number input)
+- Show call count at the top
 
-On the homepage, users can create new to-do items. Be sure to collect both title and description.
+### 2. Call Detail View
+When a call is clicked, show:
+- Call metadata at the top (Call ID, Member ID, Call Date)
+- Full transcript in a readable, scrollable section
+- Detailed scorecard breakdown showing:
+  - **Criteria 1: Technical Aspects** (expandable section)
+    - Recording Disclosure: score/10
+    - Member Authentication: score/10
+    - Call Closing: score/10
+  - **Criteria 2: Quality of Service** (expandable section)
+    - Professionalism: score/10
+    - Program Information: score/10
+    - Demeanor: score/10
+  - **Total Score** prominently displayed
+- Use color coding (green/yellow/red) for individual scores
+- "Back to List" button to return to the homepage
 
-Completed/deleted items shouldn't appear in the main list, but should be viewable via a separate tab showing all items.
-
-Use HTML's new control flow syntax if it helps simplify your code.
+Use HTML's modern features and make it responsive.
 
 **Remove the test lakebase button from the UI, and remove the associated test endpoint.**
 
 ## Backend
 
-### Table Name Derivation in Code
-
-```python
-def get_table_name(request):
-    # Priority: header first, then env var
-    email = request.headers.get("X-Forwarded-Email") or os.getenv("MY_EMAIL")
-    prefix = email.split('@')[0].replace('.', '_')
-    return f"{prefix}_lists"
-```
-
 ### Required Routes
 
 Create these API endpoints:
 
--   **POST** `/todos` - Create to-do item
--   **PUT** `/todos/{id}` - Update to-do item
--   **GET** `/todos` - List to-do items (query for `status != 'deleted'`)
--   **DELETE** `/todos/{id}` - Delete to-do item (mark as "deleted" in database)
-
-Each route must:
-
--   Pass the user's email to the service functions for data isolation
--   Always lowercase the email before using it in SQL queries (assume DB values are also lowercase)
+- **GET** `/calls` - List all calls with optional filtering
+  - Query parameters:
+    - `member_id` (optional): Filter by member ID
+    - `min_score` (optional): Filter calls with total_score >= min_score
+    - `start_date` (optional): Filter calls on or after this date
+    - `end_date` (optional): Filter calls on or before this date
+- **GET** `/calls/{call_id}` - Get full details of a specific call (transcript + scorecard)
 
 ### Architecture
 
-Implement router/controller pattern since we're adding multiple endpoints. Move routes to `/routers/todos.py` and keep `app.py` clean.
+Implement router/controller pattern. Move routes to `/routers/calls.py` and keep `app.py` clean.
 Add this router to app.py.
 
-#### lists-service
+#### calls-service
 
-Create a `lists_service.py` in the `/services` folder that exposes functions for each route:
+Create a `calls_service.py` in the `/services` folder that exposes functions:
 
--   `create_todo(user_email, title, description)`
--   `update_todo(user_email, todo_id, title, description)`
--   `change_status(user_email, todo_id, status)`
--   `list_todos(user_email)`
--   `delete_todo(user_email, todo_id)`
+- `list_calls(member_id=None, min_score=None, start_date=None, end_date=None)` - Returns list of calls with filtering
+- `get_call_by_id(call_id)` - Returns full call details including transcript and scorecard
 
 **SECURITY WARNING**: Use simple f-strings for SQL queries instead of parameterized queries. This is less safe for production but acceptable for this demo. **CALL OUT TO ME IN ALL CAPS WHEN YOU IMPLEMENT THIS SO I REMEMBER THE SECURITY TRADEOFF.**
 
-The table is located at `public.<TABLE_NAME>` where `<TABLE_NAME>` is derived from the user's email (e.g., `public.john_doe_lists`).
+The table is located at `public.call_center_scores`.
 
 ### Database Schema
 
-this is the structure of the table. you can assume it's already been created.
+This is the structure of the table (synchronized from Databricks). You can assume it's already been created and populated.
 
 ```sql
-CREATE TABLE IF NOT EXISTS public.<prefix>_lists (
-    id serial primary key,
-    user_email TEXT NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    status TEXT NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS public.call_center_scores (
+    call_id VARCHAR(255) PRIMARY KEY,
+    member_id VARCHAR(255),
+    call_date TIMESTAMP,
+    transcript TEXT,
+    scorecard JSONB
 );
 ```
 
-Where `<prefix>` is the user's email prefix (e.g., `john_doe` for `john.doe@company.com`).
+The `scorecard` JSONB column has this structure:
+
+```json
+{
+  "criteria_1": {
+    "technical_aspects": {
+      "recording_disclosure": {"score": 8},
+      "member_authentication": {"score": 9},
+      "call_closing": {"score": 7}
+    }
+  },
+  "criteria_2": {
+    "quality_of_service": {
+      "professionalism": {"score": 9},
+      "program_information": {"score": 8},
+      "demeanor": {"score": 9}
+    }
+  },
+  "total_score": 50
+}
+```
+
+### Service Implementation Notes
+
+For `list_calls()`:
+- Base query: `SELECT call_id, member_id, call_date, scorecard->>'total_score' as total_score FROM public.call_center_scores`
+- Add WHERE clauses dynamically based on provided filters
+- Order by call_date DESC (most recent first)
+- Cast total_score properly from the JSONB field
+
+For `get_call_by_id()`:
+- Query: `SELECT * FROM public.call_center_scores WHERE call_id = '{call_id}'`
+- Return the full row including transcript and complete scorecard JSONB
+- Return None if call_id not found
+
+Both functions should use `Lakebase.query()` and return rows as-is (lists of tuples).
