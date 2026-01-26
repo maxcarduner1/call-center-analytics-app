@@ -1,0 +1,9 @@
+command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+env:
+  - name: DATABRICKS_HOST
+    value: https://fe-sandbox-serverless-8gcbj9.cloud.databricks.com
+  - name: LAKEBASE_INSTANCE_NAME
+    value: telco-call-center
+  - name: LAKEBASE_DB_NAME
+    value: public
