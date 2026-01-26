@@ -28,7 +28,7 @@ w = WorkspaceClient(
 )
 instance_name = os.getenv("LAKEBASE_INSTANCE_NAME")
 db_name = os.getenv("LAKEBASE_DB_NAME")
-db_user = "2025_vibe_coding"  # this is a group name, fine to leave hard-coded
+db_user = "mc-call-center-vibing"  # this is a group name, fine to leave hard-coded
 
 cred = w.database.generate_database_credential(
     request_id=str(uuid.uuid4()), instance_names=[instance_name]

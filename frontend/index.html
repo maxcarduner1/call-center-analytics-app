@@ -33,12 +33,84 @@
             margin-top: 1rem;
             opacity: 0.9;
         }
+        button {
+            margin-top: 2rem;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #667eea;
+            background: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #51cf66;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Hello World!</h1>
         <p>Welcome to the Call Center Analytics App</p>
+        <button id="testBtn" onclick="testDatabase()">Test Lakebase Connection</button>
+        <div id="result"></div>
     </div>
+
+    <script>
+        async function testDatabase() {
+            const btn = document.getElementById('testBtn');
+            const resultDiv = document.getElementById('result');
+            
+            btn.disabled = true;
+            resultDiv.innerHTML = 'Connecting to Lakebase...';
+            resultDiv.className = '';
+            
+            try {
+                const response = await fetch('/api/test-db');
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `✅ Connected! Database time: ${data.timestamp}`;
+                    resultDiv.className = 'success';
+                } else {
+                    resultDiv.innerHTML = `❌ Error: ${data.error}`;
+                    resultDiv.className = 'error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ Network error: ${error.message}`;
+                resultDiv.className = 'error';
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
 </body>
 </html>
