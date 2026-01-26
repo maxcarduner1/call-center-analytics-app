@@ -3,113 +3,725 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World</title>
+    <title>Call Center Quality Scoring</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-        }
-        .container {
+            padding: 30px;
             text-align: center;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.1);
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        /* Call List View */
+        #callListView {
+            display: block;
+        }
+
+        #callDetailView {
+            display: none;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .call-count {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group input {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .filter-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-back {
+            background: #6c757d;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .btn-back:hover {
+            background: #5a6268;
+        }
+
+        .calls-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .calls-table thead {
+            background: #f8f9fa;
+        }
+
+        .calls-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .calls-table td {
+            padding: 18px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .calls-table tbody tr {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .calls-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .score-badge {
+            display: inline-block;
+            padding: 6px 14px;
             border-radius: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            font-weight: 600;
+            font-size: 0.9rem;
         }
-        h1 {
-            font-size: 3rem;
-            margin: 0;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+
+        .score-high {
+            background: #d4edda;
+            color: #155724;
         }
-        p {
+
+        .score-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .score-low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Call Detail View */
+        .call-header {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .call-header h2 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .call-metadata {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .metadata-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metadata-label {
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .metadata-value {
+            font-size: 1.1rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .transcript-box {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.8;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .scorecard {
+            display: grid;
+            gap: 20px;
+        }
+
+        .criteria-section {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .criteria-header {
+            background: #667eea;
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .criteria-header:hover {
+            background: #5568d3;
+        }
+
+        .criteria-toggle {
             font-size: 1.2rem;
-            margin-top: 1rem;
+        }
+
+        .criteria-content {
+            padding: 20px;
+            background: white;
+        }
+
+        .criteria-content.collapsed {
+            display: none;
+        }
+
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .score-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .score-name {
+            font-weight: 500;
+            color: #333;
+            text-transform: capitalize;
+        }
+
+        .score-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .total-score-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .total-score-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
             opacity: 0.9;
         }
-        button {
-            margin-top: 2rem;
-            padding: 1rem 2rem;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #667eea;
-            background: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
+
+        .total-score-value {
+            font-size: 3rem;
+            font-weight: 700;
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px 0 rgba(0, 0, 0, 0.3);
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1rem;
         }
-        button:active {
-            transform: translateY(0);
-        }
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        #result {
-            margin-top: 1.5rem;
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            min-height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Courier New', monospace;
-        }
+
         .error {
-            color: #ff6b6b;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
         }
-        .success {
-            color: #51cf66;
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .filters {
+                grid-template-columns: 1fr;
+            }
+
+            .calls-table {
+                font-size: 0.9rem;
+            }
+
+            .calls-table th,
+            .calls-table td {
+                padding: 10px 8px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Hello World!</h1>
-        <p>Welcome to the Call Center Analytics App</p>
-        <button id="testBtn" onclick="testDatabase()">Test Lakebase Connection</button>
-        <div id="result"></div>
+        <header>
+            <h1>📞 Call Center Quality Scoring</h1>
+            <p>AI-Powered Call Analysis Dashboard</p>
+        </header>
+
+        <div class="content">
+            <!-- Call List View -->
+            <div id="callListView">
+                <div class="stats">
+                    <div class="call-count" id="callCount">Loading calls...</div>
+                </div>
+
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="memberIdFilter">Member ID</label>
+                        <input type="text" id="memberIdFilter" placeholder="Enter member ID">
+                    </div>
+                    <div class="filter-group">
+                        <label for="minScoreFilter">Minimum Score</label>
+                        <input type="number" id="minScoreFilter" placeholder="0-60" min="0" max="60">
+                    </div>
+                    <div class="filter-group">
+                        <label for="startDateFilter">Start Date</label>
+                        <input type="date" id="startDateFilter">
+                    </div>
+                    <div class="filter-group">
+                        <label for="endDateFilter">End Date</label>
+                        <input type="date" id="endDateFilter">
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn-primary" onclick="applyFilters()">Apply Filters</button>
+                        <button class="btn-secondary" onclick="clearFilters()">Clear</button>
+                    </div>
+                </div>
+
+                <div id="callsTableContainer"></div>
+            </div>
+
+            <!-- Call Detail View -->
+            <div id="callDetailView">
+                <button class="btn-back" onclick="showCallList()">← Back to Call List</button>
+                <div id="callDetailContent"></div>
+            </div>
+        </div>
     </div>
 
     <script>
-        async function testDatabase() {
-            const btn = document.getElementById('testBtn');
-            const resultDiv = document.getElementById('result');
+        let currentFilters = {};
+
+        // Load calls on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCalls();
+        });
+
+        async function loadCalls() {
+            const container = document.getElementById('callsTableContainer');
+            const countElement = document.getElementById('callCount');
             
-            btn.disabled = true;
-            resultDiv.innerHTML = 'Connecting to Lakebase...';
-            resultDiv.className = '';
+            container.innerHTML = '<div class="loading">Loading calls...</div>';
             
             try {
-                const response = await fetch('/api/test-db');
+                // Build query string
+                const params = new URLSearchParams();
+                if (currentFilters.member_id) params.append('member_id', currentFilters.member_id);
+                if (currentFilters.min_score) params.append('min_score', currentFilters.min_score);
+                if (currentFilters.start_date) params.append('start_date', currentFilters.start_date);
+                if (currentFilters.end_date) params.append('end_date', currentFilters.end_date);
+                
+                const response = await fetch(`/api/calls?${params}`);
                 const data = await response.json();
                 
-                if (data.success) {
-                    resultDiv.innerHTML = `✅ Connected! Database time: ${data.timestamp}`;
-                    resultDiv.className = 'success';
-                } else {
-                    resultDiv.innerHTML = `❌ Error: ${data.error}`;
-                    resultDiv.className = 'error';
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to load calls');
                 }
+                
+                countElement.textContent = `${data.count} Call${data.count !== 1 ? 's' : ''}`;
+                
+                if (data.calls.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <h3>No calls found</h3>
+                            <p>Try adjusting your filters</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Build table
+                let tableHTML = `
+                    <table class="calls-table">
+                        <thead>
+                            <tr>
+                                <th>Call ID</th>
+                                <th>Member ID</th>
+                                <th>Call Date</th>
+                                <th>Total Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                data.calls.forEach(call => {
+                    const scoreClass = getScoreClass(call.total_score);
+                    const formattedDate = formatDate(call.call_date);
+                    
+                    tableHTML += `
+                        <tr onclick="viewCall('${call.call_id}')">
+                            <td><strong>${call.call_id}</strong></td>
+                            <td>${call.member_id}</td>
+                            <td>${formattedDate}</td>
+                            <td><span class="score-badge ${scoreClass}">${call.total_score}/60</span></td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+                
+                container.innerHTML = tableHTML;
+                
             } catch (error) {
-                resultDiv.innerHTML = `❌ Network error: ${error.message}`;
-                resultDiv.className = 'error';
-            } finally {
-                btn.disabled = false;
+                container.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
             }
+        }
+
+        async function viewCall(callId) {
+            const detailView = document.getElementById('callDetailView');
+            const listView = document.getElementById('callListView');
+            const contentDiv = document.getElementById('callDetailContent');
+            
+            contentDiv.innerHTML = '<div class="loading">Loading call details...</div>';
+            listView.style.display = 'none';
+            detailView.style.display = 'block';
+            
+            try {
+                const response = await fetch(`/api/calls/${callId}`);
+                const call = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(call.detail || 'Failed to load call details');
+                }
+                
+                const scoreClass = getScoreClass(call.scorecard.total_score);
+                const formattedDate = formatDate(call.call_date);
+                
+                let detailHTML = `
+                    <div class="call-header">
+                        <h2>Call Details</h2>
+                        <div class="call-metadata">
+                            <div class="metadata-item">
+                                <span class="metadata-label">Call ID</span>
+                                <span class="metadata-value">${call.call_id}</span>
+                            </div>
+                            <div class="metadata-item">
+                                <span class="metadata-label">Member ID</span>
+                                <span class="metadata-value">${call.member_id}</span>
+                            </div>
+                            <div class="metadata-item">
+                                <span class="metadata-label">Call Date</span>
+                                <span class="metadata-value">${formattedDate}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3 class="section-title">📝 Call Transcript</h3>
+                        <div class="transcript-box">${call.transcript}</div>
+                    </div>
+
+                    <div class="section">
+                        <h3 class="section-title">📊 Quality Scorecard</h3>
+                        <div class="scorecard">
+                `;
+                
+                // Criteria 1: Technical Aspects
+                if (call.scorecard.criteria_1) {
+                    const technical = call.scorecard.criteria_1.technical_aspects;
+                    detailHTML += `
+                        <div class="criteria-section">
+                            <div class="criteria-header" onclick="toggleCriteria(this)">
+                                <span>Criteria 1: Technical Aspects</span>
+                                <span class="criteria-toggle">−</span>
+                            </div>
+                            <div class="criteria-content">
+                                <div class="score-item">
+                                    <span class="score-name">Recording Disclosure</span>
+                                    <span class="score-value ${getScoreClass(technical.recording_disclosure.score * 6)}">${technical.recording_disclosure.score}/10</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-name">Member Authentication</span>
+                                    <span class="score-value ${getScoreClass(technical.member_authentication.score * 6)}">${technical.member_authentication.score}/10</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-name">Call Closing</span>
+                                    <span class="score-value ${getScoreClass(technical.call_closing.score * 6)}">${technical.call_closing.score}/10</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Criteria 2: Quality of Service
+                if (call.scorecard.criteria_2) {
+                    const quality = call.scorecard.criteria_2.quality_of_service;
+                    detailHTML += `
+                        <div class="criteria-section">
+                            <div class="criteria-header" onclick="toggleCriteria(this)">
+                                <span>Criteria 2: Quality of Service</span>
+                                <span class="criteria-toggle">−</span>
+                            </div>
+                            <div class="criteria-content">
+                                <div class="score-item">
+                                    <span class="score-name">Professionalism</span>
+                                    <span class="score-value ${getScoreClass(quality.professionalism.score * 6)}">${quality.professionalism.score}/10</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-name">Program Information</span>
+                                    <span class="score-value ${getScoreClass(quality.program_information.score * 6)}">${quality.program_information.score}/10</span>
+                                </div>
+                                <div class="score-item">
+                                    <span class="score-name">Demeanor</span>
+                                    <span class="score-value ${getScoreClass(quality.demeanor.score * 6)}">${quality.demeanor.score}/10</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                detailHTML += `
+                        </div>
+                        <div class="total-score-section">
+                            <h3>Total Quality Score</h3>
+                            <div class="total-score-value">${call.scorecard.total_score}/60</div>
+                        </div>
+                    </div>
+                `;
+                
+                contentDiv.innerHTML = detailHTML;
+                
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function showCallList() {
+            document.getElementById('callListView').style.display = 'block';
+            document.getElementById('callDetailView').style.display = 'none';
+        }
+
+        function applyFilters() {
+            currentFilters = {
+                member_id: document.getElementById('memberIdFilter').value,
+                min_score: document.getElementById('minScoreFilter').value,
+                start_date: document.getElementById('startDateFilter').value,
+                end_date: document.getElementById('endDateFilter').value
+            };
+            
+            // Remove empty values
+            Object.keys(currentFilters).forEach(key => {
+                if (!currentFilters[key]) delete currentFilters[key];
+            });
+            
+            loadCalls();
+        }
+
+        function clearFilters() {
+            document.getElementById('memberIdFilter').value = '';
+            document.getElementById('minScoreFilter').value = '';
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
+            currentFilters = {};
+            loadCalls();
+        }
+
+        function toggleCriteria(header) {
+            const content = header.nextElementSibling;
+            const toggle = header.querySelector('.criteria-toggle');
+            
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.textContent = '−';
+            } else {
+                content.classList.add('collapsed');
+                toggle.textContent = '+';
+            }
+        }
+
+        function getScoreClass(score) {
+            // For total score out of 60
+            const percentage = (score / 60) * 100;
+            if (percentage >= 70) return 'score-high';
+            if (percentage >= 50) return 'score-medium';
+            return 'score-low';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         }
     </script>
 </body>

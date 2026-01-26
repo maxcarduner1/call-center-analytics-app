@@ -6,9 +6,9 @@ Make the UI look crisp - minimalistic yet aesthetically pleasing with a professi
 
 ## Database Table
 
-The application reads from the `call_center_scores` table in the `public` schema, which is synchronized from Databricks via the reverse sync pipeline described in the design document.
+The application reads from the `transcriptions_scored_lbp_sync` table in the `analytics` schema, which is synchronized from Databricks via the reverse sync pipeline described in the design document.
 
-**Schema**: `public.call_center_scores`
+**Schema**: `public.analytics`
 
 ## Frontend & User Experience
 
@@ -76,23 +76,24 @@ Create a `calls_service.py` in the `/services` folder that exposes functions:
 
 **SECURITY WARNING**: Use simple f-strings for SQL queries instead of parameterized queries. This is less safe for production but acceptable for this demo. **CALL OUT TO ME IN ALL CAPS WHEN YOU IMPLEMENT THIS SO I REMEMBER THE SECURITY TRADEOFF.**
 
-The table is located at `public.call_center_scores`.
+The table is located at `public.analytics.call_center_scores_sync`.
 
 ### Database Schema
 
 This is the structure of the table (synchronized from Databricks). You can assume it's already been created and populated.
 
 ```sql
-CREATE TABLE IF NOT EXISTS public.call_center_scores (
-    call_id VARCHAR(255) PRIMARY KEY,
-    member_id VARCHAR(255),
-    call_date TIMESTAMP,
+CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
+    call_id TEXT PRIMARY KEY,
+    member_id TEXT,
+    call_date TEXT,
     transcript TEXT,
-    scorecard JSONB
+    scorecard_json JSONB,
+    total_score INTEGER
 );
 ```
 
-The `scorecard` JSONB column has this structure:
+The `scorecard_json` JSONB column has this structure:
 
 ```json
 {
@@ -117,14 +118,14 @@ The `scorecard` JSONB column has this structure:
 ### Service Implementation Notes
 
 For `list_calls()`:
-- Base query: `SELECT call_id, member_id, call_date, scorecard->>'total_score' as total_score FROM public.call_center_scores`
+- Base query: `SELECT call_id, member_id, call_date, total_score FROM public.analytics.call_center_scores_sync`
 - Add WHERE clauses dynamically based on provided filters
 - Order by call_date DESC (most recent first)
-- Cast total_score properly from the JSONB field
+- The total_score is already an integer column (no need to extract from JSONB)
 
 For `get_call_by_id()`:
-- Query: `SELECT * FROM public.call_center_scores WHERE call_id = '{call_id}'`
-- Return the full row including transcript and complete scorecard JSONB
+- Query: `SELECT * FROM public.analytics.call_center_scores_sync WHERE call_id = '{call_id}'`
+- Return the full row including transcript and complete scorecard_json JSONB
 - Return None if call_id not found
 
 Both functions should use `Lakebase.query()` and return rows as-is (lists of tuples).
