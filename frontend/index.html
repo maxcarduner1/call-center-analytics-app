@@ -270,11 +270,82 @@
             background: #f8f9fa;
             padding: 25px;
             border-radius: 8px;
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
-            line-height: 1.8;
+        }
+
+        /* iMessage-style conversation */
+        .conversation {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.agent {
+            align-self: flex-start;
+        }
+
+        .message.customer {
+            align-self: flex-end;
+        }
+
+        .message-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+            padding: 0 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .message.agent .message-header {
+            color: #667eea;
+        }
+
+        .message.customer .message-header {
+            color: #764ba2;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .message.agent .message-bubble {
+            background: #e8eaf6;
             color: #333;
-            font-size: 1rem;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.customer .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .total-score-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 25px;
         }
 
         .scorecard {
@@ -340,15 +411,6 @@
         .score-value {
             font-weight: 600;
             font-size: 1.1rem;
-        }
-
-        .total-score-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 8px;
-            text-align: center;
-            margin-top: 20px;
         }
 
         .total-score-section h3 {
@@ -558,6 +620,9 @@
                 const scoreClass = getScoreClass(call.scorecard.total_score);
                 const formattedDate = formatDate(call.call_date);
                 
+                // Format the transcript as a conversation
+                const formattedTranscript = formatTranscriptAsConversation(call.transcript);
+                
                 let detailHTML = `
                     <div class="call-header">
                         <h2>Call Details</h2>
@@ -577,9 +642,18 @@
                         </div>
                     </div>
 
+                    <div class="total-score-section">
+                        <h3>Total Quality Score</h3>
+                        <div class="total-score-value">${call.scorecard.total_score}/60</div>
+                    </div>
+
                     <div class="section">
-                        <h3 class="section-title">📝 Call Transcript</h3>
-                        <div class="transcript-box">${call.transcript}</div>
+                        <h3 class="section-title">💬 Call Transcript</h3>
+                        <div class="transcript-box">
+                            <div class="conversation">
+                                ${formattedTranscript}
+                            </div>
+                        </div>
                     </div>
 
                     <div class="section">
@@ -642,10 +716,6 @@
                 }
                 
                 detailHTML += `
-                        </div>
-                        <div class="total-score-section">
-                            <h3>Total Quality Score</h3>
-                            <div class="total-score-value">${call.scorecard.total_score}/60</div>
                         </div>
                     </div>
                 `;
@@ -722,6 +792,125 @@
                 hour: '2-digit',
                 minute: '2-digit'
             });
+        }
+
+        /**
+         * Format transcript as an iMessage-style conversation
+         * Parses bracketed format: [Rep: message] [Customer: message]
+         */
+        function formatTranscriptAsConversation(transcript) {
+            if (!transcript) return '<p>No transcript available</p>';
+            
+            let messages = [];
+            
+            // Parse bracketed format: [Rep: ...] [Customer: ...]
+            // Match all bracketed messages with speaker labels
+            const bracketPattern = /\[(Rep|Customer|Agent|Representative|Member|Caller|CSR):\s*([^\]]+)\]/gi;
+            const matches = [...transcript.matchAll(bracketPattern)];
+            
+            if (matches.length > 0) {
+                // Found bracketed format - use it
+                matches.forEach(match => {
+                    const speaker = match[1].toLowerCase();
+                    const text = match[2].trim();
+                    
+                    // Determine speaker type (agent vs customer)
+                    const speakerType = (speaker === 'agent' || speaker === 'representative' || speaker === 'rep' || speaker === 'csr') 
+                        ? 'agent' 
+                        : 'customer';
+                    
+                    if (text) {
+                        messages.push({
+                            speaker: speakerType,
+                            text: text
+                        });
+                    }
+                });
+            } else {
+                // Fallback: Try line-based parsing for non-bracketed format
+                const lines = transcript.split('\n').filter(line => line.trim());
+                let currentSpeaker = null;
+                let currentMessage = '';
+                
+                lines.forEach(line => {
+                    line = line.trim();
+                    
+                    // Try to detect speaker changes (common patterns)
+                    const speakerMatch = line.match(/^(Agent|Customer|Representative|Member|Caller|Rep|CSR)[\s:]/i);
+                    
+                    if (speakerMatch) {
+                        // Save previous message if exists
+                        if (currentMessage && currentSpeaker) {
+                            messages.push({
+                                speaker: currentSpeaker,
+                                text: currentMessage.trim()
+                            });
+                        }
+                        
+                        // Determine speaker type
+                        const speaker = speakerMatch[1].toLowerCase();
+                        currentSpeaker = (speaker === 'agent' || speaker === 'representative' || speaker === 'rep' || speaker === 'csr') 
+                            ? 'agent' 
+                            : 'customer';
+                        
+                        // Remove speaker label from line
+                        currentMessage = line.replace(/^(Agent|Customer|Representative|Member|Caller|Rep|CSR)[\s:]+/i, '');
+                    } else if (currentSpeaker) {
+                        // Continue current speaker's message
+                        currentMessage += ' ' + line;
+                    } else {
+                        // No speaker identified yet, start with agent
+                        if (messages.length === 0) {
+                            currentSpeaker = 'agent';
+                            currentMessage = line;
+                        }
+                    }
+                });
+                
+                // Add final message
+                if (currentMessage && currentSpeaker) {
+                    messages.push({
+                        speaker: currentSpeaker,
+                        text: currentMessage.trim()
+                    });
+                }
+            }
+            
+            // If still no messages, use simple alternating split
+            if (messages.length === 0) {
+                const sentences = transcript.match(/[^.!?]+[.!?]+/g) || [transcript];
+                sentences.forEach((sentence, index) => {
+                    messages.push({
+                        speaker: index % 2 === 0 ? 'agent' : 'customer',
+                        text: sentence.trim()
+                    });
+                });
+            }
+            
+            // Build HTML for messages
+            let html = '';
+            messages.forEach(msg => {
+                if (msg.text) {
+                    const speakerLabel = msg.speaker === 'agent' ? 'Agent' : 'Customer';
+                    html += `
+                        <div class="message ${msg.speaker}">
+                            <div class="message-header">${speakerLabel}</div>
+                            <div class="message-bubble">${escapeHtml(msg.text)}</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            return html || '<p>No transcript available</p>';
+        }
+
+        /**
+         * Escape HTML to prevent XSS
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     </script>
 </body>
