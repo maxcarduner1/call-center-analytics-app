@@ -19,10 +19,19 @@ A professional web application for viewing and analyzing call center transcripts
   - Filter by member ID, date range, minimum score, and call center rep
   - View quality scores for all calls
   - Quick access to detailed scorecards
+  - See which calls have been reviewed by humans (✏️ REVIEWED badge)
 - **CCR View**: Dedicated view for call center representative performance
   - Select specific call center representative
   - View aggregate performance statistics (total calls, avg/min/max scores)
   - See all calls for that representative in one place
+  - View human-reviewed scores for each call
+- **Human Evaluation & Override**: Quality assurance workflow
+  - Override AI-generated scores with human expert review
+  - Edit individual scorecard criteria
+  - Add free-form feedback and notes
+  - Track who reviewed each call and when
+  - Delete evaluations to revert to AI scores
+  - Human scores automatically displayed throughout the app
 - **Quality Scores**: View AI-generated quality scores for each call (0-60 scale)
 - **Detailed Scorecards**: Drill down into specific scoring criteria:
   - Technical Aspects (Recording Disclosure, Member Authentication, Call Closing)
@@ -69,7 +78,13 @@ A professional web application for viewing and analyzing call center transcripts
    python app.py
    ```
 
-4. Open your browser to `http://localhost:8000`
+4. Initialize the human evaluations table (first-time setup):
+
+   ```bash
+   curl -X POST http://localhost:8000/api/evaluations/init-table
+   ```
+
+5. Open your browser to `http://localhost:8000`
 
 ## API Endpoints
 
@@ -89,6 +104,15 @@ A professional web application for viewing and analyzing call center transcripts
 - `GET /api/ccrs` - Get list of all call center representative IDs
 - `GET /api/ccrs/{ccr_id}/stats` - Get aggregate performance statistics for a specific CCR
   - Returns: total_calls, avg_score, min_score, max_score
+
+### Human Evaluations
+
+- `POST /api/evaluations/init-table` - Initialize human evaluations table (one-time setup)
+- `GET /api/evaluations/{call_id}` - Get human evaluation for a specific call
+- `POST /api/evaluations/{call_id}` - Save or update human evaluation
+  - Body: `{ evaluator_name, scorecard_overrides, total_score_override, feedback_text }`
+- `DELETE /api/evaluations/{call_id}` - Delete human evaluation (revert to AI scores)
+- `GET /api/evaluations/` - Get list of all call IDs with human evaluations
 
 ### System
 
@@ -118,7 +142,9 @@ The application reads from data that flows through this pipeline:
 
 ## Database Schema
 
-The application reads from the `public.analytics.call_center_scores_sync` table:
+### Call Center Scores (AI-Generated)
+
+The application reads AI-generated scores from the `public.analytics.call_center_scores_sync` table:
 
 ```sql
 CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
@@ -131,6 +157,30 @@ CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
     call_center_rep_id TEXT
 );
 ```
+
+**Note:** This table is continuously synced from Databricks Delta Lake. Do not modify directly.
+
+### Human Evaluations (Override Scores)
+
+Human evaluations are stored separately in `public.analytics.human_evaluations`:
+
+```sql
+CREATE TABLE IF NOT EXISTS public.analytics.human_evaluations (
+    evaluation_id SERIAL PRIMARY KEY,
+    call_id TEXT NOT NULL UNIQUE,
+    evaluator_name TEXT,
+    evaluation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    scorecard_overrides JSONB,
+    total_score_override INTEGER,
+    feedback_text TEXT
+);
+```
+
+**Data Flow:**
+1. AI scores remain in `call_center_scores_sync` (source of truth from ETL)
+2. Human overrides stored in `human_evaluations` (this app writes here)
+3. Application merges both at query time, preferring human scores when they exist
+4. UI clearly indicates when scores have been human-reviewed
 
 ### Scorecard Structure (scorecard_json JSONB)
 

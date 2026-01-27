@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 
 from routers.calls import router as calls_router
+from routers.evaluations import router as evaluations_router
 
 # Load environment variables from .env file
 load_dotenv()
@@ -16,6 +17,7 @@ app = FastAPI(
 
 # Include routers
 app.include_router(calls_router)
+app.include_router(evaluations_router)
 
 
 @app.get("/")

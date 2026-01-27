@@ -8,6 +8,8 @@ THIS IS ACCEPTABLE ONLY FOR DEMO PURPOSES - NEVER USE IN PRODUCTION!
 """
 from typing import List, Tuple, Any, Optional
 from services.lakebase import Lakebase
+from services.human_evaluations_service import get_human_evaluation
+import json
 
 
 def list_calls(
@@ -139,3 +141,89 @@ def get_ccr_aggregate_stats(call_center_rep_id: str) -> Optional[Tuple[Any, ...]
     if rows and len(rows) > 0:
         return rows[0]
     return None
+
+
+def merge_ai_and_human_scores(call_data: dict) -> dict:
+    """
+    Merge AI scores with human overrides (if they exist).
+    
+    This function checks if a human evaluation exists for the call
+    and merges it with the AI-generated scores, preferring human
+    overrides where they exist.
+    
+    Args:
+        call_data: Dictionary containing call information with AI scores
+    
+    Returns:
+        Dictionary with merged scores and evaluation metadata
+    """
+    call_id = call_data.get("call_id")
+    
+    if not call_id:
+        return call_data
+    
+    # Try to get human evaluation
+    human_eval = get_human_evaluation(call_id)
+    
+    if human_eval is None:
+        # No human evaluation, return AI scores as-is
+        call_data["has_human_override"] = False
+        return call_data
+    
+    # Parse human evaluation
+    scorecard_overrides = human_eval[4] if len(human_eval) > 4 else {}
+    if isinstance(scorecard_overrides, str):
+        scorecard_overrides = json.loads(scorecard_overrides)
+    
+    total_score_override = human_eval[5] if len(human_eval) > 5 else None
+    feedback_text = human_eval[6] if len(human_eval) > 6 else ""
+    evaluator_name = human_eval[2] if len(human_eval) > 2 else None
+    evaluation_date = human_eval[3] if len(human_eval) > 3 else None
+    
+    # Merge scores: human overrides take precedence
+    if scorecard_overrides:
+        # Deep merge the scorecard
+        ai_scorecard = call_data.get("scorecard", {})
+        merged_scorecard = deep_merge_scorecards(ai_scorecard, scorecard_overrides)
+        call_data["scorecard"] = merged_scorecard
+    
+    # Override total score if provided
+    if total_score_override is not None:
+        call_data["total_score"] = total_score_override
+    
+    # Add evaluation metadata
+    call_data["has_human_override"] = True
+    call_data["human_evaluation"] = {
+        "evaluator_name": evaluator_name,
+        "evaluation_date": str(evaluation_date) if evaluation_date else None,
+        "feedback_text": feedback_text,
+        "scorecard_overrides": scorecard_overrides,
+        "total_score_override": total_score_override
+    }
+    
+    return call_data
+
+
+def deep_merge_scorecards(ai_scorecard: dict, human_overrides: dict) -> dict:
+    """
+    Deep merge AI scorecard with human overrides.
+    Human scores take precedence over AI scores.
+    
+    Args:
+        ai_scorecard: Original AI-generated scorecard
+        human_overrides: Human override scores
+    
+    Returns:
+        Merged scorecard dictionary
+    """
+    merged = ai_scorecard.copy()
+    
+    for key, value in human_overrides.items():
+        if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
+            # Recursively merge nested dictionaries
+            merged[key] = deep_merge_scorecards(merged[key], value)
+        else:
+            # Override with human value
+            merged[key] = value
+    
+    return merged
