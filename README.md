@@ -15,13 +15,20 @@ A professional web application for viewing and analyzing call center transcripts
 
 ### 🎯 Core Functionality
 
-- **Call List View**: Browse all call center transcripts with key metrics
+- **All Calls View**: Browse all call center transcripts with key metrics
+  - Filter by member ID, date range, minimum score, and call center rep
+  - View quality scores for all calls
+  - Quick access to detailed scorecards
+- **CCR View**: Dedicated view for call center representative performance
+  - Select specific call center representative
+  - View aggregate performance statistics (total calls, avg/min/max scores)
+  - See all calls for that representative in one place
 - **Quality Scores**: View AI-generated quality scores for each call (0-60 scale)
 - **Detailed Scorecards**: Drill down into specific scoring criteria:
   - Technical Aspects (Recording Disclosure, Member Authentication, Call Closing)
   - Quality of Service (Professionalism, Program Information, Demeanor)
 - **Full Transcripts**: Read complete call transcripts
-- **Advanced Filtering**: Filter calls by member ID, date range, and minimum score
+- **Advanced Filtering**: Filter calls by member ID, date range, minimum score, and call center rep
 
 ### 🎨 User Experience
 
@@ -74,7 +81,14 @@ A professional web application for viewing and analyzing call center transcripts
     - `min_score` (optional): Filter calls with total_score >= value
     - `start_date` (optional): Filter calls on or after this date (YYYY-MM-DD)
     - `end_date` (optional): Filter calls on or before this date (YYYY-MM-DD)
+    - `call_center_rep_id` (optional): Filter by call center representative ID
 - `GET /api/calls/{call_id}` - Get full details of a specific call (transcript + scorecard)
+
+### Call Center Representatives
+
+- `GET /api/ccrs` - Get list of all call center representative IDs
+- `GET /api/ccrs/{ccr_id}/stats` - Get aggregate performance statistics for a specific CCR
+  - Returns: total_calls, avg_score, min_score, max_score
 
 ### System
 
@@ -113,7 +127,8 @@ CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
     call_date TEXT,
     transcript TEXT,
     scorecard_json JSONB,
-    total_score INTEGER
+    total_score INTEGER,
+    call_center_rep_id TEXT
 );
 ```
 

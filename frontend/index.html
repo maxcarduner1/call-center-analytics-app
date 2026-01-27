@@ -49,13 +49,129 @@
             padding: 30px;
         }
 
-        /* Call List View */
-        #callListView {
+        /* View Selector */
+        .view-selector {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .view-btn {
+            padding: 12px 30px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn:hover {
+            background: #f0f1ff;
+        }
+
+        .view-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Views */
+        #allCallsView {
             display: block;
+        }
+
+        #ccrView {
+            display: none;
         }
 
         #callDetailView {
             display: none;
+        }
+
+        /* CCR View Styles */
+        .ccr-selector-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .ccr-selector-section label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ccr-selector-section select {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ccr-selector-section select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .ccr-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .ccr-stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .ccr-stat-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .ccr-stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .ccr-stat-card.highlight {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .ccr-stat-card.highlight .ccr-stat-label {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .ccr-stat-card.highlight .ccr-stat-value {
+            color: white;
         }
 
         .stats {
@@ -474,8 +590,14 @@
         </header>
 
         <div class="content">
-            <!-- Call List View -->
-            <div id="callListView">
+            <!-- View Selector -->
+            <div class="view-selector">
+                <button class="view-btn active" onclick="showView('allCalls')">📊 All Calls View</button>
+                <button class="view-btn" onclick="showView('ccr')">👤 CCR View</button>
+            </div>
+
+            <!-- All Calls View -->
+            <div id="allCallsView">
                 <div class="stats">
                     <div class="call-count" id="callCount">Loading calls...</div>
                 </div>
@@ -497,6 +619,10 @@
                         <label for="endDateFilter">End Date</label>
                         <input type="date" id="endDateFilter">
                     </div>
+                    <div class="filter-group">
+                        <label for="ccrFilter">Call Center Rep</label>
+                        <input type="text" id="ccrFilter" placeholder="Enter CCR ID">
+                    </div>
                     <div class="filter-actions">
                         <button class="btn-primary" onclick="applyFilters()">Apply Filters</button>
                         <button class="btn-secondary" onclick="clearFilters()">Clear</button>
@@ -506,22 +632,215 @@
                 <div id="callsTableContainer"></div>
             </div>
 
+            <!-- CCR View -->
+            <div id="ccrView">
+                <div class="ccr-selector-section">
+                    <label for="ccrSelect">Select Call Center Representative</label>
+                    <select id="ccrSelect" onchange="loadCCRData()">
+                        <option value="">Loading CCRs...</option>
+                    </select>
+                </div>
+
+                <div id="ccrStatsContainer"></div>
+                <div id="ccrCallsContainer"></div>
+            </div>
+
             <!-- Call Detail View -->
             <div id="callDetailView">
-                <button class="btn-back" onclick="showCallList()">← Back to Call List</button>
+                <button class="btn-back" onclick="returnToPreviousView()">← Back</button>
                 <div id="callDetailContent"></div>
             </div>
         </div>
     </div>
 
     <script>
+        // SUMMARY: Application state and initialization
+        // Tracks current filters, view mode, and loads initial data on page load
         let currentFilters = {};
+        let currentView = 'allCalls'; // Track which view we're in: 'allCalls' or 'ccr'
 
-        // Load calls on page load
+        // Load calls and CCRs on page load
         window.addEventListener('DOMContentLoaded', () => {
             loadCalls();
+            loadCCRList();
         });
 
+        // SUMMARY: View switching functionality
+        // Handles switching between All Calls View and CCR View
+        function showView(viewName) {
+            currentView = viewName;
+            
+            // Update button states
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Show/hide appropriate views
+            if (viewName === 'allCalls') {
+                document.getElementById('allCallsView').style.display = 'block';
+                document.getElementById('ccrView').style.display = 'none';
+                document.getElementById('callDetailView').style.display = 'none';
+                loadCalls();
+            } else if (viewName === 'ccr') {
+                document.getElementById('allCallsView').style.display = 'none';
+                document.getElementById('ccrView').style.display = 'block';
+                document.getElementById('callDetailView').style.display = 'none';
+                // CCR data will load when user selects a CCR
+            }
+        }
+
+        function returnToPreviousView() {
+            document.getElementById('callDetailView').style.display = 'none';
+            if (currentView === 'allCalls') {
+                document.getElementById('allCallsView').style.display = 'block';
+            } else if (currentView === 'ccr') {
+                document.getElementById('ccrView').style.display = 'block';
+            }
+        }
+
+        // SUMMARY: Load CCR list for dropdown
+        // Fetches all unique call center rep IDs and populates the select dropdown
+        async function loadCCRList() {
+            try {
+                const response = await fetch('/api/ccrs');
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to load CCRs');
+                }
+                
+                const select = document.getElementById('ccrSelect');
+                select.innerHTML = '<option value="">-- Select a CCR --</option>';
+                
+                data.ccr_ids.forEach(ccrId => {
+                    const option = document.createElement('option');
+                    option.value = ccrId;
+                    option.textContent = ccrId;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading CCRs:', error);
+                const select = document.getElementById('ccrSelect');
+                select.innerHTML = '<option value="">Error loading CCRs</option>';
+            }
+        }
+
+        // SUMMARY: Load CCR aggregate stats and calls
+        // Fetches performance statistics and all calls for the selected CCR
+        async function loadCCRData() {
+            const ccrId = document.getElementById('ccrSelect').value;
+            const statsContainer = document.getElementById('ccrStatsContainer');
+            const callsContainer = document.getElementById('ccrCallsContainer');
+            
+            if (!ccrId) {
+                statsContainer.innerHTML = '';
+                callsContainer.innerHTML = '';
+                return;
+            }
+            
+            statsContainer.innerHTML = '<div class="loading">Loading CCR statistics...</div>';
+            callsContainer.innerHTML = '';
+            
+            try {
+                // Load aggregate stats
+                const statsResponse = await fetch(`/api/ccrs/${ccrId}/stats`);
+                const stats = await statsResponse.json();
+                
+                if (!statsResponse.ok) {
+                    throw new Error(stats.detail || 'Failed to load CCR stats');
+                }
+                
+                // Display stats
+                statsContainer.innerHTML = `
+                    <div class="ccr-stats-grid">
+                        <div class="ccr-stat-card">
+                            <div class="ccr-stat-label">Total Calls</div>
+                            <div class="ccr-stat-value">${stats.total_calls}</div>
+                        </div>
+                        <div class="ccr-stat-card highlight">
+                            <div class="ccr-stat-label">Average Score</div>
+                            <div class="ccr-stat-value">${stats.avg_score}/60</div>
+                        </div>
+                        <div class="ccr-stat-card">
+                            <div class="ccr-stat-label">Min Score</div>
+                            <div class="ccr-stat-value">${stats.min_score}/60</div>
+                        </div>
+                        <div class="ccr-stat-card">
+                            <div class="ccr-stat-label">Max Score</div>
+                            <div class="ccr-stat-value">${stats.max_score}/60</div>
+                        </div>
+                    </div>
+                `;
+                
+                // Load calls for this CCR
+                callsContainer.innerHTML = '<div class="loading">Loading calls...</div>';
+                
+                const callsResponse = await fetch(`/api/calls?call_center_rep_id=${ccrId}`);
+                const callsData = await callsResponse.json();
+                
+                if (!callsResponse.ok) {
+                    throw new Error(callsData.detail || 'Failed to load calls');
+                }
+                
+                if (callsData.calls.length === 0) {
+                    callsContainer.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📭</div>
+                            <h3>No calls found</h3>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Build calls table
+                let tableHTML = `
+                    <h3 class="section-title">All Calls (${callsData.count})</h3>
+                    <table class="calls-table">
+                        <thead>
+                            <tr>
+                                <th>Call ID</th>
+                                <th>Member ID</th>
+                                <th>Call Date</th>
+                                <th>Total Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                callsData.calls.forEach(call => {
+                    const scoreClass = getScoreClass(call.total_score);
+                    const formattedDate = formatDate(call.call_date);
+                    
+                    tableHTML += `
+                        <tr onclick="viewCall('${call.call_id}')">
+                            <td><strong>${call.call_id}</strong></td>
+                            <td>${call.member_id}</td>
+                            <td>${formattedDate}</td>
+                            <td><span class="score-badge ${scoreClass}">${call.total_score}/60</span></td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+                
+                callsContainer.innerHTML = tableHTML;
+                
+            } catch (error) {
+                statsContainer.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+                callsContainer.innerHTML = '';
+            }
+        }
+
+        // SUMMARY: Load and display all calls with filters
+        // Fetches calls from API with current filter parameters and displays them in a table
         async function loadCalls() {
             const container = document.getElementById('callsTableContainer');
             const countElement = document.getElementById('callCount');
@@ -535,6 +854,7 @@
                 if (currentFilters.min_score) params.append('min_score', currentFilters.min_score);
                 if (currentFilters.start_date) params.append('start_date', currentFilters.start_date);
                 if (currentFilters.end_date) params.append('end_date', currentFilters.end_date);
+                if (currentFilters.call_center_rep_id) params.append('call_center_rep_id', currentFilters.call_center_rep_id);
                 
                 const response = await fetch(`/api/calls?${params}`);
                 const data = await response.json();
@@ -564,6 +884,7 @@
                                 <th>Call ID</th>
                                 <th>Member ID</th>
                                 <th>Call Date</th>
+                                <th>CCR ID</th>
                                 <th>Total Score</th>
                             </tr>
                         </thead>
@@ -573,12 +894,14 @@
                 data.calls.forEach(call => {
                     const scoreClass = getScoreClass(call.total_score);
                     const formattedDate = formatDate(call.call_date);
+                    const ccrId = call.call_center_rep_id || 'N/A';
                     
                     tableHTML += `
                         <tr onclick="viewCall('${call.call_id}')">
                             <td><strong>${call.call_id}</strong></td>
                             <td>${call.member_id}</td>
                             <td>${formattedDate}</td>
+                            <td>${ccrId}</td>
                             <td><span class="score-badge ${scoreClass}">${call.total_score}/60</span></td>
                         </tr>
                     `;
@@ -600,13 +923,17 @@
             }
         }
 
+        // SUMMARY: View call details
+        // Fetches and displays full call information including transcript and scorecard
         async function viewCall(callId) {
             const detailView = document.getElementById('callDetailView');
-            const listView = document.getElementById('callListView');
+            const allCallsView = document.getElementById('allCallsView');
+            const ccrView = document.getElementById('ccrView');
             const contentDiv = document.getElementById('callDetailContent');
             
             contentDiv.innerHTML = '<div class="loading">Loading call details...</div>';
-            listView.style.display = 'none';
+            allCallsView.style.display = 'none';
+            ccrView.style.display = 'none';
             detailView.style.display = 'block';
             
             try {
@@ -638,6 +965,10 @@
                             <div class="metadata-item">
                                 <span class="metadata-label">Call Date</span>
                                 <span class="metadata-value">${formattedDate}</span>
+                            </div>
+                            <div class="metadata-item">
+                                <span class="metadata-label">CCR ID</span>
+                                <span class="metadata-value">${call.call_center_rep_id || 'N/A'}</span>
                             </div>
                         </div>
                     </div>
@@ -731,17 +1062,15 @@
             }
         }
 
-        function showCallList() {
-            document.getElementById('callListView').style.display = 'block';
-            document.getElementById('callDetailView').style.display = 'none';
-        }
-
+        // SUMMARY: Apply filters to All Calls View
+        // Collects filter values from form inputs and reloads the calls list
         function applyFilters() {
             currentFilters = {
                 member_id: document.getElementById('memberIdFilter').value,
                 min_score: document.getElementById('minScoreFilter').value,
                 start_date: document.getElementById('startDateFilter').value,
-                end_date: document.getElementById('endDateFilter').value
+                end_date: document.getElementById('endDateFilter').value,
+                call_center_rep_id: document.getElementById('ccrFilter').value
             };
             
             // Remove empty values
@@ -752,11 +1081,14 @@
             loadCalls();
         }
 
+        // SUMMARY: Clear all filters
+        // Resets all filter inputs and reloads the full calls list
         function clearFilters() {
             document.getElementById('memberIdFilter').value = '';
             document.getElementById('minScoreFilter').value = '';
             document.getElementById('startDateFilter').value = '';
             document.getElementById('endDateFilter').value = '';
+            document.getElementById('ccrFilter').value = '';
             currentFilters = {};
             loadCalls();
         }
