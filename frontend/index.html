@@ -2155,14 +2155,21 @@
                                         <span class="score">${qual.demeanor?.score || 0}/10</span>
                                     </div>
                                 </div>
-                                
+                    `;
+                    
+                    // Add transcript summary if available
+                    if (call.transcript_summary) {
+                        html += `
                                 <div style="margin-top: 20px;">
-                                    <div class="comparison-transcript-title">Transcript Preview</div>
+                                    <div class="comparison-transcript-title">Call Summary</div>
                                     <div class="comparison-transcript">
-                                        ${escapeHtml(call.transcript.substring(0, 300))}${call.transcript.length > 300 ? '...' : ''}
+                                        ${escapeHtml(call.transcript_summary)}
                                     </div>
                                 </div>
-                                
+                        `;
+                    }
+                    
+                    html += `
                                 <button class="btn-primary" style="width: 100%; margin-top: 15px;" onclick="viewCall('${call.call_id}')">
                                     View Full Details
                                 </button>
