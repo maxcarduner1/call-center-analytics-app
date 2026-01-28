@@ -1,0 +1,1 @@
+call_center_scores_sync now has a field titled transcript_summary, please use this to display within each call detail at the top in between the overall score and the transcript message section, make sure to update docs to reflect this

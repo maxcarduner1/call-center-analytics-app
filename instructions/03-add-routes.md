@@ -89,9 +89,14 @@ CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
     call_date TEXT,
     transcript TEXT,
     scorecard_json JSONB,
-    total_score INTEGER
+    total_score INTEGER,
+    call_center_rep_id TEXT,
+    transcript_summary TEXT
 );
 ```
+
+**Field Notes:**
+- `transcript_summary`: AI-generated summary of the call conversation, should be displayed in the call detail view
 
 The `scorecard_json` JSONB column has this structure:
 

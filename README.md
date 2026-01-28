@@ -154,11 +154,15 @@ CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
     transcript TEXT,
     scorecard_json JSONB,
     total_score INTEGER,
-    call_center_rep_id TEXT
+    call_center_rep_id TEXT,
+    transcript_summary TEXT
 );
 ```
 
 **Note:** This table is continuously synced from Databricks Delta Lake. Do not modify directly.
+
+**Fields:**
+- `transcript_summary`: AI-generated summary of the call, displayed in the call detail view between the quality score and full transcript
 
 ### Human Evaluations (Override Scores)
 

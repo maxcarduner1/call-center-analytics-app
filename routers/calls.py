@@ -87,7 +87,8 @@ async def get_call(call_id: str):
             "transcript": row[3],
             "scorecard": scorecard_json,
             "total_score": row[5] if len(row) > 5 else None,
-            "call_center_rep_id": row[6] if len(row) > 6 else None
+            "call_center_rep_id": row[6] if len(row) > 6 else None,
+            "transcript_summary": row[7] if len(row) > 7 else None
         }
         
         # Merge with human evaluation if it exists
