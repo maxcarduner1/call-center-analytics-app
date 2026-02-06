@@ -15,18 +15,23 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            background: #f5f5f5;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
 
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
+            width: 100%;
+            max-width: none;
+            height: 100vh;
+            margin: 0;
+            padding: 0 20px; /* Add padding for content spacing */
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
+            border-radius: 0;
+            box-shadow: none;
+            overflow-y: auto;
         }
 
         header {
@@ -601,65 +606,71 @@
             background: #da190b;
         }
 
-        /* Agent Assistant Styles */
-        .agent-fab {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-            cursor: pointer;
+        /* Agent Assistant Styles - Split Screen Layout */
+        .app-wrapper {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            z-index: 999;
-            transition: all 0.3s;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
         }
 
-        .agent-fab:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+        #mainContent {
+            width: 100% !important; /* Force full width by default */
+            max-width: none !important;
+            overflow-y: auto;
+            transition: all 0.3s ease;
         }
 
-        .agent-sidebar {
+        /* When agent is open, shrink main content */
+        #mainContent.split {
+            width: 60% !important;
+            max-width: none !important;
+        }
+
+        .agent-panel {
             position: fixed;
             top: 0;
-            right: -450px;
-            width: 450px;
+            right: 0;
+            width: 40%;
             height: 100vh;
             background: white;
-            box-shadow: -2px 0 20px rgba(0, 0, 0, 0.2);
+            box-shadow: -2px 0 20px rgba(0, 0, 0, 0.15);
             z-index: 1000;
-            transition: right 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
             display: flex;
             flex-direction: column;
+            transform: translateX(100%); /* Hidden off-screen to the right */
+            opacity: 0;
+            pointer-events: none; /* Can't interact when hidden */
         }
 
-        .agent-sidebar.open {
-            right: 0;
+        .agent-panel.open {
+            transform: translateX(0); /* Slide in from right */
+            opacity: 1;
+            pointer-events: auto; /* Can interact when visible */
         }
 
-        .agent-header {
+        .agent-panel-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
 
-        .agent-header h3 {
+        .agent-panel-header h3 {
             font-size: 1.3rem;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        #agentBtn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
 
         .agent-close {
@@ -924,15 +935,25 @@
             }
         }
 
+        @media (max-width: 1024px) {
+            .agent-panel {
+                width: 50%;
+                right: -50%;
+            }
+
+            #mainContent.split {
+                width: 50%;
+            }
+        }
+
         @media (max-width: 768px) {
-            .agent-sidebar {
+            .agent-panel {
                 width: 100%;
                 right: -100%;
             }
 
-            .agent-fab {
-                bottom: 20px;
-                right: 20px;
+            #mainContent.split {
+                display: none;
             }
         }
 
@@ -1345,17 +1366,19 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📞 Call Center Quality Scoring</h1>
-            <p>AI-Powered Call Analysis Dashboard</p>
-        </header>
+    <div class="app-wrapper">
+        <div class="container" id="mainContent">
+            <header>
+                <h1>📞 Call Center Quality Scoring</h1>
+                <p>AI-Powered Call Analysis Dashboard</p>
+            </header>
 
-        <div class="content">
+            <div class="content">
             <!-- View Selector -->
             <div class="view-selector">
                 <button class="view-btn active" onclick="showView('allCalls')">📊 All Calls View</button>
                 <button class="view-btn" onclick="showView('ccr')">👤 CCR View</button>
+                <button class="view-btn" id="agentBtn" onclick="toggleAgentPanel()">🤖 AI Assistant</button>
             </div>
 
             <!-- All Calls View -->
@@ -1431,22 +1454,17 @@
                 <button class="btn-back" onclick="returnToPreviousView()">← Back</button>
                 <div id="callDetailContent"></div>
             </div>
-        </div>
-    </div>
+        </div> <!-- Close content -->
+    </div> <!-- Close container / mainContent -->
 
-    <!-- Agent Assistant Floating Button -->
-    <button class="agent-fab" onclick="toggleAgentSidebar()" title="AI Assistant">
-        🤖
-    </button>
-
-    <!-- Agent Assistant Sidebar -->
-    <div id="agentSidebar" class="agent-sidebar">
-        <div class="agent-header">
+    <!-- Agent Assistant Panel (Split Screen) -->
+    <div id="agentPanel" class="agent-panel">
+        <div class="agent-panel-header">
             <h3>
                 <span>🤖</span>
                 <span>AI Assistant</span>
             </h3>
-            <button class="agent-close" onclick="toggleAgentSidebar()">&times;</button>
+            <button class="agent-close" onclick="toggleAgentPanel()">&times;</button>
         </div>
         
         <div id="agentChatContainer" class="agent-chat-container">
@@ -1472,6 +1490,8 @@
             </form>
         </div>
     </div>
+
+    </div> <!-- Close app-wrapper -->
 
     <!-- Edit Evaluation Modal -->
     <div id="evaluationModal" class="modal">
@@ -2411,16 +2431,27 @@
         // Handle AI agent sidebar and chat functionality
 
         let agentMessages = [];
-        let isAgentSidebarOpen = false;
+        let isAgentPanelOpen = false;
 
-        function toggleAgentSidebar() {
-            const sidebar = document.getElementById('agentSidebar');
-            isAgentSidebarOpen = !isAgentSidebarOpen;
+        function toggleAgentPanel() {
+            const panel = document.getElementById('agentPanel');
+            const mainContent = document.getElementById('mainContent');
+            const agentBtn = document.getElementById('agentBtn');
             
-            if (isAgentSidebarOpen) {
-                sidebar.classList.add('open');
+            isAgentPanelOpen = !isAgentPanelOpen;
+            
+            if (isAgentPanelOpen) {
+                panel.classList.add('open');
+                mainContent.classList.add('split');
+                agentBtn.classList.add('active');
+                // Focus on input
+                setTimeout(() => {
+                    document.getElementById('agentInput').focus();
+                }, 300);
             } else {
-                sidebar.classList.remove('open');
+                panel.classList.remove('open');
+                mainContent.classList.remove('split');
+                agentBtn.classList.remove('active');
             }
         }
 
@@ -2585,9 +2616,9 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
 
-        // Clear chat history when closing sidebar
-        document.getElementById('agentSidebar').addEventListener('transitionend', function() {
-            if (!isAgentSidebarOpen) {
+        // Clear chat history when closing panel (optional)
+        document.getElementById('agentPanel').addEventListener('transitionend', function() {
+            if (!isAgentPanelOpen) {
                 // Optional: clear chat history when closing
                 // agentMessages = [];
                 // const chatContainer = document.getElementById('agentChatContainer');
