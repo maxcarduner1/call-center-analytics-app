@@ -30,17 +30,18 @@ def list_calls(
         call_center_rep_id: Filter by call center representative ID
     
     Returns:
-        List of tuples containing (call_id, member_id, call_date, total_score, call_center_rep_id)
+        List of tuples containing (call_id, member_id, call_date, total_score, rep_id)
     """
     # Base query
     sql = """
         SELECT 
             call_id, 
             member_id, 
-            call_date, 
+            call_date,
+            call_time,
             total_score,
-            call_center_rep_id
-        FROM public.analytics.call_center_scores_sync
+            rep_id
+        FROM public.telco_call_center_analytics.call_center_scores_sync
     """
     
     # Build WHERE clauses
@@ -59,7 +60,7 @@ def list_calls(
         where_clauses.append(f"call_date <= '{end_date} 23:59:59'")
     
     if call_center_rep_id:
-        where_clauses.append(f"call_center_rep_id = '{call_center_rep_id}'")
+        where_clauses.append(f"rep_id = '{call_center_rep_id}'")
     
     # Add WHERE clause if any filters
     if where_clauses:
@@ -84,7 +85,7 @@ def get_call_by_id(call_id: str) -> Optional[Tuple[Any, ...]]:
         Tuple containing (call_id, member_id, call_date, transcript, scorecard)
         or None if call not found
     """
-    sql = f"SELECT * FROM public.analytics.call_center_scores_sync WHERE call_id = '{call_id}'"
+    sql = f"SELECT * FROM public.telco_call_center_analytics.call_center_scores_sync WHERE call_id = '{call_id}'"
     
     lakebase = Lakebase()
     rows = lakebase.query(sql)
@@ -99,13 +100,13 @@ def get_all_ccr_ids() -> List[Tuple[Any, ...]]:
     Get list of all unique call center representative IDs.
     
     Returns:
-        List of tuples containing (call_center_rep_id,)
+        List of tuples containing (rep_id,)
     """
     sql = """
-        SELECT DISTINCT call_center_rep_id 
-        FROM public.analytics.call_center_scores_sync 
-        WHERE call_center_rep_id IS NOT NULL
-        ORDER BY call_center_rep_id
+        SELECT DISTINCT rep_id 
+        FROM public.telco_call_center_analytics.call_center_scores_sync 
+        WHERE rep_id IS NOT NULL
+        ORDER BY rep_id
     """
     
     lakebase = Lakebase()
@@ -120,19 +121,19 @@ def get_ccr_aggregate_stats(call_center_rep_id: str) -> Optional[Tuple[Any, ...]
         call_center_rep_id: The call center rep ID to get stats for
     
     Returns:
-        Tuple containing (call_center_rep_id, total_calls, avg_score, min_score, max_score)
+        Tuple containing (rep_id, total_calls, avg_score, min_score, max_score)
         or None if no data found
     """
     sql = f"""
         SELECT 
-            call_center_rep_id,
+            rep_id,
             COUNT(*) as total_calls,
             ROUND(AVG(total_score)::numeric, 2) as avg_score,
             MIN(total_score) as min_score,
             MAX(total_score) as max_score
-        FROM public.analytics.call_center_scores_sync
-        WHERE call_center_rep_id = '{call_center_rep_id}'
-        GROUP BY call_center_rep_id
+        FROM public.telco_call_center_analytics.call_center_scores_sync
+        WHERE rep_id = '{call_center_rep_id}'
+        GROUP BY rep_id
     """
     
     lakebase = Lakebase()

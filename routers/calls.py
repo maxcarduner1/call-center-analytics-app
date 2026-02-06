@@ -42,16 +42,22 @@ async def get_calls(
             has_override = human_eval is not None
             
             # Use human override score if it exists
-            total_score = row[3]
+            # New schema: row[4] = total_score
+            total_score = row[4]
             if has_override and len(human_eval) > 5 and human_eval[5] is not None:
                 total_score = human_eval[5]
+            
+            # Combine call_date and call_time if both exist
+            call_datetime = row[2]  # call_date
+            if row[3]:  # call_time
+                call_datetime = f"{row[2]} {row[3]}" if row[2] else row[3]
             
             calls.append({
                 "call_id": call_id,
                 "member_id": row[1],
-                "call_date": str(row[2]) if row[2] else None,
+                "call_date": str(call_datetime) if call_datetime else None,
                 "total_score": total_score,
-                "call_center_rep_id": row[4] if len(row) > 4 else None,
+                "call_center_rep_id": row[5] if len(row) > 5 else None,  # rep_id
                 "has_human_override": has_override
             })
         
@@ -75,20 +81,40 @@ async def get_call(call_id: str):
         if row is None:
             raise HTTPException(status_code=404, detail="Call not found")
         
+        # New schema indices:
+        # 0=call_id, 1=member_id, 2=rep_id, 3=rep_name, 4=call_date, 5=call_time,
+        # 6=call_outcome, 7=call_purpose, 8=call_duration_seconds, 9=transcript,
+        # 10=scorecard_json, 11=total_score, 12=transcript_summary
+        
         # Parse the scorecard JSON
-        scorecard_json = row[4] if len(row) > 4 else {}
+        scorecard_json = row[10] if len(row) > 10 else {}
+        
+        # Handle different types - JSONB columns are already parsed by psycopg2
         if isinstance(scorecard_json, str):
-            scorecard_json = json.loads(scorecard_json)
+            try:
+                scorecard_json = json.loads(scorecard_json)
+            except json.JSONDecodeError as e:
+                print(f"JSON decode error for call {call_id}: {e}")
+                print(f"Raw scorecard_json: {scorecard_json[:200] if scorecard_json else 'None'}")
+                scorecard_json = {}
+        elif scorecard_json is None:
+            scorecard_json = {}
+        
+        # Combine call_date and call_time
+        call_datetime = row[4] if len(row) > 4 else None
+        call_time = row[5] if len(row) > 5 else None
+        if call_datetime and call_time:
+            call_datetime = f"{call_datetime} {call_time}"
         
         call_data = {
             "call_id": row[0],
             "member_id": row[1],
-            "call_date": row[2],
-            "transcript": row[3],
+            "call_date": call_datetime,
+            "transcript": row[9] if len(row) > 9 else "",
             "scorecard": scorecard_json,
-            "total_score": row[5] if len(row) > 5 else None,
-            "call_center_rep_id": row[6] if len(row) > 6 else None,
-            "transcript_summary": row[7] if len(row) > 7 else None
+            "total_score": row[11] if len(row) > 11 else None,
+            "call_center_rep_id": row[2] if len(row) > 2 else None,  # rep_id
+            "transcript_summary": row[12] if len(row) > 12 else None
         }
         
         # Merge with human evaluation if it exists
@@ -97,6 +123,8 @@ async def get_call(call_id: str):
         return call_data
     except HTTPException:
         raise
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"JSON parsing error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

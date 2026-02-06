@@ -226,6 +226,7 @@
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
+            align-items: stretch;
         }
 
         .comparison-card {
@@ -234,6 +235,9 @@
             border-radius: 12px;
             overflow: hidden;
             transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
 
         .comparison-card:hover {
@@ -260,6 +264,9 @@
 
         .comparison-card-body {
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
         }
 
         .comparison-score-display {
@@ -323,6 +330,10 @@
             overflow-y: auto;
             font-size: 0.85rem;
             line-height: 1.6;
+        }
+
+        .comparison-card-footer {
+            margin-top: auto;
         }
 
         .comparison-transcript-title {
@@ -2160,7 +2171,7 @@
                     // Add transcript summary if available
                     if (call.transcript_summary) {
                         html += `
-                                <div style="margin-top: 20px;">
+                                <div style="margin-top: 20px; flex: 1;">
                                     <div class="comparison-transcript-title">Call Summary</div>
                                     <div class="comparison-transcript">
                                         ${escapeHtml(call.transcript_summary)}
@@ -2170,9 +2181,11 @@
                     }
                     
                     html += `
-                                <button class="btn-primary" style="width: 100%; margin-top: 15px;" onclick="viewCall('${call.call_id}')">
-                                    View Full Details
-                                </button>
+                                <div class="comparison-card-footer">
+                                    <button class="btn-primary" style="width: 100%;" onclick="viewCall('${call.call_id}')">
+                                        View Full Details
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;

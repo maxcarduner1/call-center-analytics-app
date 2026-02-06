@@ -6,9 +6,9 @@ Make the UI look crisp - minimalistic yet aesthetically pleasing with a professi
 
 ## Database Table
 
-The application reads from the `transcriptions_scored_lbp_sync` table in the `analytics` schema, which is synchronized from Databricks via the reverse sync pipeline described in the design document.
+The application reads from the `call_center_scores_sync` table in the `telco_call_center_analytics` schema, which is synchronized from Databricks via the reverse sync pipeline described in the design document.
 
-**Schema**: `public.analytics`
+**Schema**: `public.telco_call_center_analytics`
 
 ## Frontend & User Experience
 
@@ -76,21 +76,26 @@ Create a `calls_service.py` in the `/services` folder that exposes functions:
 
 **SECURITY WARNING**: Use simple f-strings for SQL queries instead of parameterized queries. This is less safe for production but acceptable for this demo. **CALL OUT TO ME IN ALL CAPS WHEN YOU IMPLEMENT THIS SO I REMEMBER THE SECURITY TRADEOFF.**
 
-The table is located at `public.analytics.call_center_scores_sync`.
+The table is located at `public.telco_call_center_analytics.call_center_scores_sync`.
 
 ### Database Schema
 
 This is the structure of the table (synchronized from Databricks). You can assume it's already been created and populated.
 
 ```sql
-CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
+CREATE TABLE IF NOT EXISTS public.telco_call_center_analytics.call_center_scores_sync (
     call_id TEXT PRIMARY KEY,
     member_id TEXT,
+    rep_id TEXT,
+    rep_name TEXT,
     call_date TEXT,
+    call_time TEXT,
+    call_outcome TEXT,
+    call_purpose TEXT,
+    call_duration_seconds INTEGER,
     transcript TEXT,
     scorecard_json JSONB,
     total_score INTEGER,
-    call_center_rep_id TEXT,
     transcript_summary TEXT
 );
 ```
@@ -123,13 +128,13 @@ The `scorecard_json` JSONB column has this structure:
 ### Service Implementation Notes
 
 For `list_calls()`:
-- Base query: `SELECT call_id, member_id, call_date, total_score FROM public.analytics.call_center_scores_sync`
+- Base query: `SELECT call_id, member_id, call_date, total_score FROM public.telco_call_center_analytics.call_center_scores_sync`
 - Add WHERE clauses dynamically based on provided filters
 - Order by call_date DESC (most recent first)
 - The total_score is already an integer column (no need to extract from JSONB)
 
 For `get_call_by_id()`:
-- Query: `SELECT * FROM public.analytics.call_center_scores_sync WHERE call_id = '{call_id}'`
+- Query: `SELECT * FROM public.telco_call_center_analytics.call_center_scores_sync WHERE call_id = '{call_id}'`
 - Return the full row including transcript and complete scorecard_json JSONB
 - Return None if call_id not found
 

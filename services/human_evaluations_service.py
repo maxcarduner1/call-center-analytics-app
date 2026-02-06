@@ -12,7 +12,7 @@ THIS IS ACCEPTABLE ONLY FOR DEMO PURPOSES - NEVER USE IN PRODUCTION!
 
 Database Schema:
 ----------------
-CREATE TABLE IF NOT EXISTS public.analytics.human_evaluations (
+CREATE TABLE IF NOT EXISTS public.telco_call_center_analytics.human_evaluations (
     evaluation_id SERIAL PRIMARY KEY,
     call_id TEXT NOT NULL,
     evaluator_name TEXT,
@@ -52,7 +52,7 @@ def ensure_human_evaluations_table():
     This should be called on application startup.
     """
     sql = """
-        CREATE TABLE IF NOT EXISTS public.analytics.human_evaluations (
+        CREATE TABLE IF NOT EXISTS public.telco_call_center_analytics.human_evaluations (
             evaluation_id SERIAL PRIMARY KEY,
             call_id TEXT NOT NULL,
             evaluator_name TEXT,
@@ -89,7 +89,7 @@ def get_human_evaluation(call_id: str) -> Optional[Tuple[Any, ...]]:
             scorecard_overrides, 
             total_score_override, 
             feedback_text
-        FROM public.analytics.human_evaluations 
+        FROM public.telco_call_center_analytics.human_evaluations 
         WHERE call_id = '{call_id}'
     """
     
@@ -127,7 +127,7 @@ def save_human_evaluation(
     evaluator_escaped = evaluator_name.replace("'", "''")
     
     sql = f"""
-        INSERT INTO public.analytics.human_evaluations 
+        INSERT INTO public.telco_call_center_analytics.human_evaluations 
             (call_id, evaluator_name, scorecard_overrides, total_score_override, feedback_text)
         VALUES 
             ('{call_id}', '{evaluator_escaped}', '{scorecard_json}'::jsonb, {total_score_override}, '{feedback_escaped}')
@@ -160,7 +160,7 @@ def delete_human_evaluation(call_id: str) -> bool:
         True if deleted, False if not found
     """
     sql = f"""
-        DELETE FROM public.analytics.human_evaluations 
+        DELETE FROM public.telco_call_center_analytics.human_evaluations 
         WHERE call_id = '{call_id}'
         RETURNING *
     """
@@ -180,7 +180,7 @@ def get_all_evaluated_call_ids() -> List[str]:
     """
     sql = """
         SELECT call_id 
-        FROM public.analytics.human_evaluations
+        FROM public.telco_call_center_analytics.human_evaluations
         ORDER BY evaluation_date DESC
     """
     

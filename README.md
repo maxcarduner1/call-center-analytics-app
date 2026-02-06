@@ -144,17 +144,22 @@ The application reads from data that flows through this pipeline:
 
 ### Call Center Scores (AI-Generated)
 
-The application reads AI-generated scores from the `public.analytics.call_center_scores_sync` table:
+The application reads AI-generated scores from the `public.telco_call_center_analytics.call_center_scores_sync` table:
 
 ```sql
-CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
+CREATE TABLE IF NOT EXISTS public.telco_call_center_analytics.call_center_scores_sync (
     call_id TEXT PRIMARY KEY,
     member_id TEXT,
+    rep_id TEXT,
+    rep_name TEXT,
     call_date TEXT,
+    call_time TEXT,
+    call_outcome TEXT,
+    call_purpose TEXT,
+    call_duration_seconds INTEGER,
     transcript TEXT,
     scorecard_json JSONB,
     total_score INTEGER,
-    call_center_rep_id TEXT,
     transcript_summary TEXT
 );
 ```
@@ -166,10 +171,10 @@ CREATE TABLE IF NOT EXISTS public.analytics.call_center_scores_sync (
 
 ### Human Evaluations (Override Scores)
 
-Human evaluations are stored separately in `public.analytics.human_evaluations`:
+Human evaluations are stored separately in `public.telco_call_center_analytics.human_evaluations`:
 
 ```sql
-CREATE TABLE IF NOT EXISTS public.analytics.human_evaluations (
+CREATE TABLE IF NOT EXISTS public.telco_call_center_analytics.human_evaluations (
     evaluation_id SERIAL PRIMARY KEY,
     call_id TEXT NOT NULL UNIQUE,
     evaluator_name TEXT,
