@@ -7,3 +7,5 @@ env:
     value: telco-call-center
   - name: LAKEBASE_DB_NAME
     value: public
+  - name: DATABRICKS_AGENT_ENDPOINT
+    value: https://fevm-cmegdemos.cloud.databricks.com/serving-endpoints/agents_cmegdemos_catalog-telco_call_center_analytics-analytics/invocations
