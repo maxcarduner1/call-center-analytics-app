@@ -46,6 +46,10 @@ A professional web application for viewing and analyzing call center transcripts
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile
 - **Expandable Sections**: Collapsible scorecard criteria for easy navigation
 - **Real-time Filtering**: Instant results without page refreshes
+- **AI Assistant Sidebar**: Floating button provides instant access to AI-powered help
+- **CCR Performance View**: Dedicated view for analyzing individual representative performance
+- **Side-by-Side Comparison**: Compare up to 4 calls to spot trends and patterns
+- **Human Evaluation Override**: Review and override AI scores with manual assessments
 
 ### 📊 Data Architecture
 
@@ -71,6 +75,7 @@ A professional web application for viewing and analyzing call center transcripts
      - `DATABRICKS_CLIENT_SECRET`
      - `LAKEBASE_INSTANCE_NAME`
      - `LAKEBASE_DB_NAME`
+     - `DATABRICKS_AGENT_ENDPOINT` (for AI Assistant feature)
 
 3. Run the application:
 
@@ -113,6 +118,12 @@ A professional web application for viewing and analyzing call center transcripts
   - Body: `{ evaluator_name, scorecard_overrides, total_score_override, feedback_text }`
 - `DELETE /api/evaluations/{call_id}` - Delete human evaluation (revert to AI scores)
 - `GET /api/evaluations/` - Get list of all call IDs with human evaluations
+
+### AI Agent Assistant
+
+- `POST /api/agent/chat` - Send messages to AI assistant and get responses
+  - Body: `{ "messages": [{"role": "user", "content": "question"}] }`
+  - Returns: AI-generated response in OpenAI-compatible format
 
 ### System
 

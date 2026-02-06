@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Call Center Quality Scoring</title>
+    <!-- Markdown parser for agent responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -599,6 +601,341 @@
             background: #da190b;
         }
 
+        /* Agent Assistant Styles */
+        .agent-fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            z-index: 999;
+            transition: all 0.3s;
+        }
+
+        .agent-fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .agent-sidebar {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100vh;
+            background: white;
+            box-shadow: -2px 0 20px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transition: right 0.3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .agent-sidebar.open {
+            right: 0;
+        }
+
+        .agent-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .agent-header h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .agent-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .agent-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .agent-chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #f5f5f5;
+        }
+
+        .agent-message {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+            animation: fadeIn 0.3s;
+        }
+
+        .agent-message.user {
+            align-self: flex-end;
+        }
+
+        .agent-message.assistant {
+            align-self: flex-start;
+        }
+
+        .agent-message-bubble {
+            padding: 12px 16px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        /* Markdown formatting in agent messages */
+        .agent-message.assistant .agent-message-bubble {
+            line-height: 1.6;
+        }
+
+        .agent-message-bubble h1,
+        .agent-message-bubble h2,
+        .agent-message-bubble h3,
+        .agent-message-bubble h4 {
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .agent-message-bubble h1 { font-size: 1.5rem; }
+        .agent-message-bubble h2 { font-size: 1.3rem; }
+        .agent-message-bubble h3 { font-size: 1.1rem; }
+        .agent-message-bubble h4 { font-size: 1rem; }
+
+        .agent-message-bubble p {
+            margin: 8px 0;
+        }
+
+        .agent-message-bubble ul,
+        .agent-message-bubble ol {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+
+        .agent-message-bubble li {
+            margin: 4px 0;
+        }
+
+        .agent-message-bubble table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 12px 0;
+            font-size: 0.9rem;
+        }
+
+        .agent-message-bubble th,
+        .agent-message-bubble td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .agent-message-bubble th {
+            background: #f5f5f5;
+            font-weight: 600;
+        }
+
+        .agent-message-bubble tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .agent-message-bubble code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .agent-message-bubble pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+
+        .agent-message-bubble pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .agent-message-bubble blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 12px;
+            margin: 8px 0;
+            color: #666;
+        }
+
+        .agent-message-bubble hr {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 16px 0;
+        }
+
+        .agent-message-bubble strong {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .agent-message-bubble em {
+            font-style: italic;
+        }
+
+        .agent-message.user .agent-message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .agent-message.assistant .agent-message-bubble {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .agent-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .agent-input-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .agent-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .agent-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .agent-send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+
+        .agent-send-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        .agent-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .agent-welcome {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .agent-welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .agent-welcome h4 {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .agent-typing {
+            display: flex;
+            gap: 5px;
+            padding: 12px 16px;
+        }
+
+        .agent-typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #999;
+            animation: typing 1.4s infinite;
+        }
+
+        .agent-typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .agent-typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .agent-sidebar {
+                width: 100%;
+                right: -100%;
+            }
+
+            .agent-fab {
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+
         .stats {
             display: flex;
             justify-content: space-between;
@@ -1094,6 +1431,45 @@
                 <button class="btn-back" onclick="returnToPreviousView()">← Back</button>
                 <div id="callDetailContent"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Agent Assistant Floating Button -->
+    <button class="agent-fab" onclick="toggleAgentSidebar()" title="AI Assistant">
+        🤖
+    </button>
+
+    <!-- Agent Assistant Sidebar -->
+    <div id="agentSidebar" class="agent-sidebar">
+        <div class="agent-header">
+            <h3>
+                <span>🤖</span>
+                <span>AI Assistant</span>
+            </h3>
+            <button class="agent-close" onclick="toggleAgentSidebar()">&times;</button>
+        </div>
+        
+        <div id="agentChatContainer" class="agent-chat-container">
+            <div class="agent-welcome">
+                <div class="agent-welcome-icon">👋</div>
+                <h4>Hello! I'm your AI Assistant</h4>
+                <p>Ask me anything about call center analytics, quality scores, or specific calls.</p>
+            </div>
+        </div>
+        
+        <div class="agent-input-container">
+            <form class="agent-input-form" onsubmit="sendAgentMessage(event)">
+                <input 
+                    type="text" 
+                    id="agentInput" 
+                    class="agent-input" 
+                    placeholder="Type your question..." 
+                    autocomplete="off"
+                >
+                <button type="submit" class="agent-send-btn" id="agentSendBtn">
+                    ➤
+                </button>
+            </form>
         </div>
     </div>
 
@@ -2030,6 +2406,200 @@
                 closeEvaluationModal();
             }
         }
+
+        // SUMMARY: Agent Assistant Functions
+        // Handle AI agent sidebar and chat functionality
+
+        let agentMessages = [];
+        let isAgentSidebarOpen = false;
+
+        function toggleAgentSidebar() {
+            const sidebar = document.getElementById('agentSidebar');
+            isAgentSidebarOpen = !isAgentSidebarOpen;
+            
+            if (isAgentSidebarOpen) {
+                sidebar.classList.add('open');
+            } else {
+                sidebar.classList.remove('open');
+            }
+        }
+
+        async function sendAgentMessage(event) {
+            event.preventDefault();
+            
+            const input = document.getElementById('agentInput');
+            const sendBtn = document.getElementById('agentSendBtn');
+            const chatContainer = document.getElementById('agentChatContainer');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Remove welcome message if it exists
+            const welcomeMsg = chatContainer.querySelector('.agent-welcome');
+            if (welcomeMsg) {
+                welcomeMsg.remove();
+            }
+            
+            // Add user message to UI
+            addAgentMessage('user', message);
+            agentMessages.push({ role: 'user', content: message });
+            
+            // Clear input and disable send button
+            input.value = '';
+            sendBtn.disabled = true;
+            
+            // Add typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'agent-message assistant';
+            typingDiv.id = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="agent-message-bubble">
+                    <div class="agent-typing">
+                        <div class="agent-typing-dot"></div>
+                        <div class="agent-typing-dot"></div>
+                        <div class="agent-typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            try {
+                // Call agent endpoint
+                const response = await fetch('/api/agent/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        messages: agentMessages
+                    })
+                });
+                
+                // Remove typing indicator
+                typingDiv.remove();
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to get response from agent');
+                }
+                
+                const data = await response.json();
+                
+                // Log the full response for debugging
+                console.log('Agent response:', data);
+                console.log('Agent response type:', typeof data);
+                console.log('Agent response keys:', Object.keys(data));
+                
+                // Extract assistant response - recursively search for text content
+                let assistantMessage = '';
+                
+                // Helper function to recursively extract text content
+                function extractText(obj, depth = 0) {
+                    if (depth > 5) return null; // Prevent infinite recursion
+                    
+                    if (typeof obj === 'string') {
+                        return obj;
+                    }
+                    
+                    if (!obj || typeof obj !== 'object') {
+                        return null;
+                    }
+                    
+                    // Common field names for text content
+                    const textFields = ['content', 'text', 'message', 'response', 'answer', 'output'];
+                    for (const field of textFields) {
+                        if (obj[field]) {
+                            const extracted = extractText(obj[field], depth + 1);
+                            if (extracted) return extracted;
+                        }
+                    }
+                    
+                    // Check if it's an array
+                    if (Array.isArray(obj) && obj.length > 0) {
+                        // Try to get the last item (usually the latest message)
+                        const lastItem = obj[obj.length - 1];
+                        const extracted = extractText(lastItem, depth + 1);
+                        if (extracted) return extracted;
+                    }
+                    
+                    return null;
+                }
+                
+                assistantMessage = extractText(data);
+                
+                // Fallback to pretty JSON if we couldn't extract text
+                if (!assistantMessage) {
+                    console.error('Could not extract text from response, showing full object:', data);
+                    assistantMessage = 'Response received but could not extract text. Full response:\n\n```json\n' + 
+                                     JSON.stringify(data, null, 2) + 
+                                     '\n```';
+                }
+                
+                console.log('Extracted message:', assistantMessage);
+                
+                // Add assistant response to UI and messages
+                addAgentMessage('assistant', assistantMessage);
+                agentMessages.push({ role: 'assistant', content: assistantMessage });
+                
+            } catch (error) {
+                // Remove typing indicator
+                const typing = document.getElementById('typing-indicator');
+                if (typing) typing.remove();
+                
+                // Show error message
+                addAgentMessage('assistant', `Sorry, I encountered an error: ${error.message}`);
+            } finally {
+                // Re-enable send button
+                sendBtn.disabled = false;
+                input.focus();
+            }
+        }
+
+        function addAgentMessage(role, content) {
+            const chatContainer = document.getElementById('agentChatContainer');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `agent-message ${role}`;
+            
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.className = 'agent-message-bubble';
+            
+            // For assistant messages, parse markdown and render as HTML
+            if (role === 'assistant' && typeof marked !== 'undefined') {
+                try {
+                    bubbleDiv.innerHTML = marked.parse(content);
+                } catch (e) {
+                    console.error('Error parsing markdown:', e);
+                    bubbleDiv.textContent = content;
+                }
+            } else {
+                // For user messages, use plain text
+                bubbleDiv.textContent = content;
+            }
+            
+            messageDiv.appendChild(bubbleDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Clear chat history when closing sidebar
+        document.getElementById('agentSidebar').addEventListener('transitionend', function() {
+            if (!isAgentSidebarOpen) {
+                // Optional: clear chat history when closing
+                // agentMessages = [];
+                // const chatContainer = document.getElementById('agentChatContainer');
+                // chatContainer.innerHTML = `
+                //     <div class="agent-welcome">
+                //         <div class="agent-welcome-icon">👋</div>
+                //         <h4>Hello! I'm your AI Assistant</h4>
+                //         <p>Ask me anything about call center analytics, quality scores, or specific calls.</p>
+                //     </div>
+                // `;
+            }
+        });
 
         // SUMMARY: Call Selection and Comparison Functions
         // Handle selecting calls for side-by-side comparison
